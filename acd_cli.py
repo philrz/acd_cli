@@ -751,15 +751,16 @@ def delete_extraneous(node, path, exclude_re, exclude_paths, delete_excluded):
         path_excluded = (path in exclude_paths) or any(map(lambda x: re.match(x, name), exclude_re))
 
         if delete_excluded or not path_excluded:
-            logger.info('Moving "%s" to trash as it has been removed locally.' % node.name)
+            logger.info('Moving "%s" (%s) to trash as it has been removed locally.' % (node.name, path))
 
             r = acd_client.move_to_trash(node.id)
             cache.insert_node(r)
 
             return
 
-    if isinstance(node, schema.Folder):
-        for child in node.children:
+    if node.is_folder:
+        folders, files = cache.list_children(node.id)
+        for child in folders + files:
             child_path = os.path.join(path, child.name)
 
             delete_extraneous(child, child_path, exclude_re, exclude_paths, delete_excluded)
@@ -778,7 +779,7 @@ def upload_action(args: argparse.Namespace) -> int:
 
         for path in (os.path.realpath(p) for p in args.path):
             # get destination node on server
-            node = cache.resolve('/' + os.path.basename(path), cache.get_node(args.parent))[0]
+            node = cache.resolve('/' + os.path.basename(path))
 
             delete_extraneous(node, path, excl_re, exclude_paths, args.delete_excluded)
 
